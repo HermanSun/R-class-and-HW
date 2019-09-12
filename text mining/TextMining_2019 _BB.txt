@@ -1,0 +1,218 @@
+﻿#############################################################
+############# TEXT MINING in R ##############################
+#############################################################
+## There is no one coding way! This is one example.. You can search other possible codes
+# Given newness and complexity of text mining data, it is difficult to explain code line by line during class
+# you can search or practice these or other text mining codes for your own purposes. 
+
+## Goal: Finding meaning pattern from unstructured Textual reviews
+## (1) Search frequent words.
+## (2) Find frequent noun words
+## (3) Examine frequency pattern across prodcut categories
+## (4) Additioanl analysis (e.g., Descriptive Statsitics, CrossTab, Word Associations)
+## (5) Hierarchical clustering
+## (6) Topic Models (Latent Direchlet Allocation)
+## (6) Sentiment analysis (Optional)
+
+#############################
+### Twitter Data Example ####
+#############################
+### To collect data from Twitter ###
+## https://www.r-bloggers.com/setting-up-the-twitter-r-package-for-text-analytics/
+#You need to register and get key from twitter... please try this for yourself later
+
+library(devtools)
+library(httr)
+library(twitteR)
+library(RCurl)
+library(base64enc)
+library(tm)
+library(wordcloud)
+library(ggplot2)
+
+### apps.twitter.com ##
+
+consumer_key <- 'B0EPNNawFpSJHCynd4eAC1vSy' ##your key
+consumer_secret <- 'NXuLDMHjJEDGRoFkdJpH0eikK9VwHVOyRc73pkue3So1xVG1Gu' ##your token
+access_token <- '1084635702-ekFa32bBOVqgUANO5zDZHotjpRDaHEtochz7Vg1' ##your access token
+access_secret <- '7l59B69YI3n4U880CRfyeVWGmhvJwBNFLcX3PUDSkeAiK' ##your access secret
+
+setup_twitter_oauth(consumer_key,consumer_secret,access_token,access_secret)
+1 #selecting yes
+
+#Example 
+##searchTwitter will issue a search of Twitter based on a supplied search string.
+
+AlphaGo <- searchTwitter("AlphaGo", n=100, lang="en") 
+
+AlphaGo[1:3]
+
+AlphaGo_text <- sapply(AlphaGo, function(x) x$getText()) #get texts
+
+Alph_corpus <-Corpus(VectorSource(AlphaGo_text))
+inspect(Alph_corpus[1])
+
+Alph_corpus[[1]]$content
+
+#########################################
+### a toy example for word similarity ###
+#########################################
+data("crude")
+tdm <- TermDocumentMatrix(crude)
+
+#find word associations
+findAssocs(tdm, c("oil", "opec", "xyz"), c(0.7, 0.75, 0.1))
+
+tdmx=removeSparseTerms(tdm, 0.2)##参数含义：1=全部保留，0.9=只去除最sparse的部分； 0.1=只保留最普遍的
+##sparsity refers to the threshold of relative document frequency for a term, above which the term will be removed. 
+##Relative document frequency here means a proportion. 
+## sparsity is smaller as it approaches 1.0.
+inspect(tdmx[,1:10])
+d1 <- dist(tdmx, method="euclidian") #distance matrix of frequencey across 16 words in each document 
+fit <- hclust(d=d1, method="ward.D")  
+plot(fit)
+########################################
+
+##########################################
+### Online REview DATa Analysis ##########
+##########################################
+
+## Assuming online review data is ready from Web Scrapping
+
+setwd("F:/Arizona State University/Spring 2019/Marketing Analytics 2019/2019/9. Text Mining")
+TMData<-read.csv("Samsung_S3_S4_iPhone_4S_5.csv",header=TRUE)##import iphone data
+n=dim(TMData)[1]
+TMData[1,];
+
+iphone=data.frame(doc_id=as.character(1:n),text=TMData[,5]) #extract only textual reviews
+
+### check the data in many ways ###
+dim(iphone)
+
+##########################################
+### preprocessing of the textual DATA ####
+##########################################
+
+#iphonedata=DataframeSource(iphone) #create a data frame source
+#A data frame source interprets each row of the data frame x as a document
+
+#TMD=Corpus(iphonedata)
+TMD=Corpus(VectorSource(iphone$text)) #without DataframeSource...
+
+#Representing and computing on corpora. 
+#Corpora are collections of documents containing (natural language) text
+
+TMD[[1]]$content
+TMD[[1]]$meta ## additional informaiton for this text
+
+##some preprocessing
+TMD <- tm_map(TMD, PlainTextDocument)# Create objects of class PlainTextDocument
+TMD <- tm_map(TMD, content_transformer(tolower)) ## change to lower case
+TMD <- tm_map(TMD, removeWords, stopwords("english")) #remove stopwords
+stopwords("english") ## to show examples of stopwords
+TMD <- tm_map(TMD, stripWhitespace) #Strip extra whitespace from a text document.
+TMD <- tm_map(TMD, removeNumbers)
+TMD <- tm_map(TMD, removePunctuation)
+TMD <- tm_map(TMD, removeWords, c("does","not")) #remove additional unnecessary words selected by users. 
+
+## creat word matrix ###
+TMDM=TermDocumentMatrix(TMD,control = list(removePunctuation = TRUE,stopwords = TRUE))
+
+dim(TMDM) #the number of all words X the number of reviews -- Very Sparse
+inspect(TMDM[11:17,1:5]) #let's take a look at what is goinging there
+
+
+## Compute frequency distance ##
+dtmss <- removeSparseTerms(TMDM, 0.9) ## search frequent words
+##0.9 remove very sparse words; 
+##0.5 remove somewhat sparse words, remove all words in this example data.
+#inspect(dtmss)
+## if two terms appear in a sentence many times (similar frequency), they are assumed to have similarity. 
+inspect(dtmss[1:5,1:5])
+
+#word assocation test: rounded correlations
+findAssocs(dtmss, c("iphone", "samsung"), c(0.1, 0.1))
+
+d <- dist(dtmss, method="euclidian") #distance matrix of frequencey across 16 words in each document 
+fit <- hclust(d=d, method="ward.D")  # quite useful intuitive 	
+plot(fit)
+
+TMDM_freq=findFreqTerms(TMDM,100) # find words more than 100 frequency
+
+length(TMDM_freq) #check how many frequent words
+
+
+#########################
+###Topic Models (LDA) ###
+#########################
+
+library(topicmodels)
+library(Rmpfr) # for computing harmonic mean
+
+data("AssociatedPress", package = "topicmodels")# example data in R package
+
+AssociatedPress
+
+dtm<-AssociatedPress[1:20,]
+
+Gibbs=LDA(dtm,k=2,method="Gibbs",
+				control=list(burnin=1000,thin=10,iter=1000))
+
+Topic<- topics(Gibbs,1) # what is most likely topic across 20 docs
+Terms <- terms(Gibbs,10) #words for each topic
+# if any category labeling of the documents are avaialbe, 
+# these could be used to validte the fitted model
+
+Gibbs=LDA(dtm,k=8,method="Gibbs",
+				control=list(burnin=1000,thin=10,iter=1000))
+### burnin=1000, 不会用前1000个，而是用之后的，因为他在10000sample 之后 会converge (MCMC)
+Topic<- topics(Gibbs,1) # what is most likely topic
+Terms <- terms(Gibbs,10) #words for each topic
+# if any category labeling of the documents are avaialbe, 
+# these could be used to validte the fitted model
+
+## Online review case: Results are not useful
+## too sparse, sometimes too short for a certain document.
+
+https://knowledger.rbind.io/post/topic-modeling-using-r/ ## see harmonic mean to select K
+
+harmonicMean <- function(logLikelihoods, precision = 2000L) {
+  llMed <- median(logLikelihoods)
+  as.double(llMed - log(mean(exp(-mpfr(logLikelihoods,
+                                       prec = precision) + llMed))))
+} # for selecting number of topics
+
+k <- 10
+burnin <- 100
+iter <- 1000
+keep=50
+fitted <- topicmodels::LDA(dtm, k = k, method = "Gibbs",control = list(burnin = burnin, iter = iter, keep=keep) )
+## assuming that burnin is a multiple of keep
+logLiks <- fitted@logLiks[-c(1:(burnin/keep))]
+
+## This returns the harmomnic mean for k = 25 topics.
+harmonicMean(logLiks)
+
+seqk <- seq(2, 25, 1)
+burnin <- 100
+iter <- 1000
+keep <- 50
+system.time(fitted_many <- lapply(seqk, function(k) topicmodels::LDA(dtm, k = k,
+                                                     method = "Gibbs",control = list(burnin = burnin,
+                                                                         iter = iter, keep = keep) )))
+logLiks_many <- lapply(fitted_many, function(L)  L@logLiks[-c(1:(burnin/keep))])
+
+# compute harmonic means
+hm_many <- sapply(logLiks_many, function(h) harmonicMean(h))
+
+ldaplot <- ggplot(data.frame(seqk, hm_many), aes(x=seqk, y=hm_many)) + geom_path(lwd=1.5) +
+  theme(text = element_text(family= NULL),
+        axis.title.y=element_text(vjust=1, size=16),
+        axis.title.x=element_text(vjust=-.5, size=16),
+        axis.text=element_text(size=16),
+        plot.title=element_text(size=20)) +
+  xlab('Number of Topics') +
+  ylab('Harmonic Mean') +
+     annotate("text", x = 25, y = -30500, label = paste("The optimal number of topics is", seqk[which.max(hm_many)])) +
+  ggtitle(expression(atop("Latent Dirichlet Allocation Analysis of NEN LLIS", atop(italic("How many distinct topics in the  abstracts?"), ""))))
+ldaplot

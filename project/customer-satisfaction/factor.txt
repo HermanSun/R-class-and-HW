@@ -1,0 +1,4 @@
+factor1: Food, Seat, Inflight Entertainment, Cleanliness
+factor2: Onboard service, Baggage handling, Inflight service:
+factor3: Inflight wifi, Ease of online booking
+factor4: Online boarding

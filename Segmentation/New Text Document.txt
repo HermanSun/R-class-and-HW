@@ -1,0 +1,14 @@
+library(cluster)
+library(factoextra)
+gap_stat<-clusGap(seg.df.num, FUN = kmeans, K.max=10)# select the number of cluster
+
+
+fviz_gap_stat(gap_stat)
+
+
+
+
+##### tooth paste	
+
+gap_stat<-clusGap(Tooth,FUN=hcut, K.max=10) # select the number of cluster
+fviz_gap_stat(gap_stat)

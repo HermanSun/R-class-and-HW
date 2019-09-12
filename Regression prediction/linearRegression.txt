@@ -1,0 +1,94 @@
+sat.df<-read.csv("http://goo.gl/HKnl74")
+dim(sat.df)
+sat.df[1:4,]
+
+str(sat.df)
+
+install.packages("gpairs")
+library(gpairs)
+gpairs(sat.df)
+####
+hist(sat.df$distance)
+library(corrplot)
+sat.df$logdist <-log(sat.df$distance)
+hist(sat.df$logdist)
+
+
+colnames(sat.df) 
+corrplot.mixed(cor(sat.df[,c(2,4:9)]),upper="ellipse") # 8 rather 9
+
+# rides as independent
+m1=lm(overall~rides, data=sat.df)# lm linear model
+summary(m1)
+# plot
+plot(overall~rides,data=sat.df,xlab="Satisfaction with Rides", ylab="Overall Satisfaction")
+abline(m1)
+plot(m1$fitted.values, m1$residuals)
+## prediction
+betas=m1$coefficients
+new_value=95
+sum(betas[1]+betas[2]*new_value)
+###confidence
+
+confint(m1)
+
+#####
+m_g=lm(overall~games,data=sat.df)
+summary(m_g)
+#games
+betas=m_g$coefficients
+new_values=70
+sum(betas[1]+betas[2]*new_value)
+#wait
+m_w=lm(overall~wait,data=sat.df)
+summary(m_w)
+betas=m_w$coefficients
+new_value=80
+sum(betas[1]+betas[2]*new_value)
+### end of png 1
+realestate=read.csv("RealEstate_ExampleData(1).csv",head=TRUE)
+Y=realestate[,2]
+sqft=as.numeric(realestate[,3])
+age=as.numeric(realestate[,4])
+m2_1<-lm(Y~sqft +age)
+summary(m2_1)
+### amusement park
+m2 <-lm(overall~rides +games+wait+clean,data=sat.df)
+summary(m2)
+
+##inclass exercise
+sat.std <-sat.df[,-3];
+colnames(sat.std)
+sat.std[,3:8] <-scale(sat.std[,3:8])
+colnames(sat.std)
+m2_1 <-lm(overall~rides+games+wait+clean+weekend+logdist+num.child,data=sat.std)
+summary(m2_1)
+factor(sat.std$num.child) # num.child is not continuous value
+#factor as an IV
+
+sat.std$num.child.factor <-factor(sat.std$num.child)
+sat.std[1:5,]
+#model with child factor
+m2_2 <- lm(overall ~ rides+games+wait+clean+weekend+logdist+num.child.factor,data=sat.std)
+summary(m2_2)
+
+AIC(m2); AIC(m2_1);AIC(m2_2)
+BIC(m2);BIC(m2_1);BIC(m2_2)
+# models with binary has.child variable
+sat.std$has.child <-factor(sat.std$num.child>0)
+m2_3 <-lm(overall~rides+games+wait+clean+weekend+logdist+has.child,data=sat.std)
+summary(m2_3)
+AIC(m2_3);BIC(m2_3)
+
+##comining factors to binary variable
+
+install.packages("MCMCpack")
+library(MCMCpack)
+dim(sat.std)
+m3_3.bayes<-MCMCregress(overall ~rides+games+wait+clean+weekend+logdist+has.child,data=sat.std)
+summary(m3_3.bayes)
+
+m3_3.bayes[1:3.]
+
+plot(density(m3_3.bayes[,2]))
+plot(density(m3_3.bayes[,3]))

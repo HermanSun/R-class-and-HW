@@ -1,0 +1,129 @@
+###########################################
+##### Segmentation Methods (Book) #########
+###########################################
+
+# subscription-based service (such as cable television or membership in a warehouse club
+# age, gender, income, number of kids, rent or own homes or currently subscribe or not... (see 5.1.4 in the book)
+
+seg.raw<- read.csv("http://goo.gl/qw303p")
+seg.df<-seg.raw[,-7] #excluing DV
+
+
+seg.summ<-function(data,groups){
+aggregate(data, list(groups), function(x) mean(as.numeric(x)))
+} # computing segment-level mean values
+ 
+########## hierarchical Clustering (page 309) #########
+######### distance based #######################
+
+library(cluster)
+
+seg.dist<-daisy(seg.df) #compute dissimilarity matrix, default=euclidean distance
+# daisy: The handling of nominal, ordinal, and (a)symmetric binary data is 
+#achieved by using the general dissimilarity coefficient of Gower (1971).
+
+as.matrix(seg.dist)[1:5,1:5]
+dim(as.matrix(seg.dist)) #distances between 300 members
+
+seg.hc<-hclust(seg.dist, method="complete")
+# complete linkage method evaluates the distance between every member
+plot(seg.hc) #resulting tree for all N=300 observations of seg.df.
+
+## decide number of segments based on dendrogram
+cut(as.dendrogram(seg.hc), h=0.7)
+
+cut(as.dendrogram(seg.hc), h=0.5) #cut-point 0.5 or 0.7?
+
+plot(cut(as.dendrogram(seg.hc), h=0.5)$lower[[1]])#cut with 0.5 in the plot
+
+### Check similarity example ###
+seg.df[c(101,107),]
+
+### Specifying the number of groups we want ###
+plot(seg.hc)
+rect.hclust(seg.hc, k=4, border="red") #prespecified K=4
+
+#assignment vector
+seg.hc.segment <- cutree(seg.hc, k=4) #membership for 4 groups
+
+table(seg.hc.segment)
+
+# for your convenience, it's good to use the saved function..
+seg.summ(seg.df, seg.hc.segment) #the function for computing segment-level means#please see some relevant graphics in textbook
+
+########## K-means  (page 311) #########
+######### distance based #######################
+
+##let's change categorical items to numbers for computing distance
+seg.df.num<-seg.df 
+seg.df.num$gender <- ifelse(seg.df$gender=="Male", 0, 1) 
+seg.df.num$ownHome <- ifelse(seg.df$ownHome=="ownNo", 0, 1)
+seg.df.num$subscribe <- ifelse(seg.df$subscribe=="subNo", 0, 1)
+#this is what we can do for this data...
+
+set.seed(1000) # please try this without set.seed first
+
+seg.k<-kmeans(seg.df.num, centers=4)
+
+seg.k$cluster
+
+seg.summ(seg.df, seg.k$cluster)
+
+# boxplot in terms of income
+boxplot(seg.df.num$income~seg.k$cluster, ylab="Income", xlab="Cluster")
+
+table(seg.k$cluster, seg.raw[,7])
+
+###################################
+#### Class Example Toothpaste #####
+###################################
+
+### Hierarchical Clustering
+
+Tooth<-read.csv("Toothpaste.csv", head=TRUE)
+
+tooth.dist<-daisy(Tooth) #works with mixed data types by rescaling the values
+
+tooth.hc<-hclust(tooth.dist, method="complete")
+plot(tooth.hc) #resulting tree for all N=30 members of toothpaste.
+
+### let's think about how many clusters from the plot...
+rect.hclust(tooth.hc, k=3, border="red") #prespecified K=3
+
+#assignment vector
+tooth.hc.segment <- cutree(tooth.hc, k=3) #membership for 3 groups
+table(tooth.hc.segment)
+
+
+########## K-means (distance based) #########
+
+tooth.k<-kmeans(Tooth, centers=3)
+
+tooth.k$cluster
+table(tooth.k$cluster)
+
+# boxplot in terms of "prevent cavity"
+boxplot(Tooth$Prevent~tooth.k$cluster, ylab="Prevent", xlab="Cluster")
+
+seg.summ(Tooth, tooth.k$cluster)
+
+
+########## Mclust  #########
+
+library(mclust)
+
+tooth.mc <- Mclust(Tooth)
+
+summary(tooth.mc) # the model search based selection information criteria
+
+clusplot(Tooth, tooth.mc$class, color=TRUE, shade=TRUE, 
+	labels=4, lines=0, main="Model-based cluster plot")
+
+BIC <- mclustBIC(Tooth)
+plot(BIC)
+
+## various BICs different assumption about within group covariance matrix:
+## see table 3 in https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5096736/
+
+seg.summ(Tooth, tooth.mc$classification)
+

@@ -1,0 +1,168 @@
+customer=read.csv("satisfaction_2015.csv",head=TRUE)
+dim(customer)
+head(customer)
+set.seed(85)
+# standardize data
+customer$Age=scale(customer$Age)
+customer$Flight.Distance=scale(customer$Flight.Distance)
+customer$Departure.Delay.in.Minutes=scale(customer$Departure.Delay.in.Minutes)
+customer$Arrival.Delay.in.Minutes=scale(customer$Arrival.Delay.in.Minutes)
+
+#customer$satisfaction_v2 <- as.character(customer$satisfaction_v2)
+#customer$satisfaction_v2[which(customer$satisfaction_v2=="satisfied")]=1
+#customer$satisfaction_v2[which(customer$satisfaction_v2=="neutral or dissatisfied")]=0
+#customer$satisfaction_v2<- as.numeric(customer$satisfaction_v2)
+
+customer$satisfaction_v2 <- as.factor(customer$satisfaction_v2)
+customer$Gender<-as.factor(customer$Gender)
+customer$Customer.Type<-as.factor(customer$Customer.Type)
+customer$Type.of.Travel<-as.factor(customer$Type.of.Travel)
+customer$Class<-as.factor(customer$Class)
+
+# factor analysis
+
+library(nFactors)
+library(Hmisc)
+library(GPArotation)
+
+
+eigen(cor(customer[,9:22])) #selection heuristics - eigenvalue 1 factor=4
+factor_res=factanal(customer[,9:22], factors=4, scores="Bartlett", rotation="varimax") 
+factor_res
+dim(factor_res$scores)
+head(factor_res$scores)
+fX=as.matrix(factor_res$scores) #IVs from factor scores.
+
+customer <- cbind(customer[,c(1:8,23,24)],fX)
+head(customer)
+dim(customer)
+
+
+### split
+train.prop=.75
+train.cases = sample(nrow(customer), nrow(customer)*train.prop)
+train.cases[1:100]
+length(train.cases)
+head(train.cases)
+class.train = customer[train.cases,2:14]
+class.valid = customer[-train.cases,2:14]
+head(class.train)
+Y.train = class.train[,1]
+X.train = class.train[,-1]
+n=dim(X.train)[1]
+n
+head(X.train)
+head(Y.train)
+
+#full.logit <-glm(satisfaction_v2~Gender+Customer.Type + Age + Type.of.Travel + Class + Flight.Distance+
+#Inflight.wifi.service+Departure.Arrival.time.convenient+Ease.of.Online.booking +
+#Gate.location + Food.and.drink + Online.boarding + Seat.comfort + Inflight.entertainment+
+#On.board.service+Leg.room.service+Baggage.handling+Checkin.service+Inflight.service+Cleanliness
+#+Departure.Delay.in.Minutes+Arrival.Delay.in.Minutes ,,data=class.train, family=binomial("logit"))
+
+library(MASS)
+full.logit <-glm(satisfaction_v2~.,family = binomial("logit") ,data = class.train)
+
+
+full.logit2 <-glm(satisfaction_v2~.+(Gender+Customer.Type + Age + Type.of.Travel + Class)^2,family = binomial("logit") ,data = class.train)
+
+summary(full.logit)
+summary(full.logit2)
+
+#level 1
+pred.train=predict(full.logit,class.train[,-1], type="response")## check here
+head(pred.train)
+pred.train <- ifelse(pred.train>0.5,"satisfied","neutral or dissatisfied")
+(ct=table(Y.train, pred.train))
+diag(prop.table(ct,1))### hit rate
+sum(diag(prop.table(ct)))
+49581/(49581+5278)
+35380/(35380+6876)
+
+#level 2
+pred.train2=predict(full.logit2,class.train[,-1], type="response")## check here
+head(pred.train2)
+pred.train2 <- ifelse(pred.train2>0.5,"satisfied","neutral or dissatisfied")
+(ct2=table(Y.train, pred.train2))
+diag(prop.table(ct2,1))### hit rate
+sum(diag(prop.table(ct2)))
+
+
+### valid data set prediction hitting for external samples
+#level 1
+pred.valid = predict(full.logit,class.valid[,-1],type="response") ##check here
+pred.valid <-ifelse(pred.valid>0.5,"satisfied","neutral or dissatisfied")
+(ctv=table(class.valid[,1],pred.valid))
+diag(prop.table(ctv,1))
+sum(diag(prop.table(ctv)))
+
+#level 2
+pred.valid2 = predict(full.logit2,class.valid[,-1],type="response") ##check here
+pred.valid2 <-ifelse(pred.valid2>0.5,"satisfied","neutral or dissatisfied")
+(ctv2=table(class.valid[,1],pred.valid2))
+diag(prop.table(ctv2,1))
+sum(diag(prop.table(ctv2)))
+
+
+
+# CrossTab
+table(customer[,2])/dim(customer)[1]
+library(gmodels)
+
+#level 1
+Cross1=CrossTable(class.valid[,1],pred.valid)
+
+CrossTv=table(class.valid[,1],pred.valid)
+CrossTv
+CrossTv[2,2]/(dim(class.valid)[1]-CrossTv[1,1]) #similarity of asymmetric binary attributes
+
+#level 2
+
+Cross2=CrossTable(class.valid[,1],pred.valid2)
+
+CrossTv2=table(class.valid[,1],pred.valid2)
+CrossTv2
+CrossTv2[2,2]/(dim(class.valid)[1]-CrossTv2[1,1]) #similarity of asymmetric binary attributes
+
+
+#step
+stepl0 <- stepAIC(full.logit,trace=FALSE)
+stepl0$anova
+AIC(stepl0)
+### use BIC
+stepl1 <- stepAIC(full.logit,k=log(nrow(class.train)))
+stepl1$anova
+AIC(stepl1)
+pred.valids1 = predict(stepl1,class.valid[,-1],type="response") ##check here
+pred.valids1 <-ifelse(pred.valids1>0.5,"satisfied","neutral or dissatisfied")
+(ctvs1=table(class.valid[,1],pred.valids1))
+diag(prop.table(ctvs1,1))
+sum(diag(prop.table(ctvs1)))
+
+
+
+#step1
+stepl01 <- stepAIC(full.logit2,trace=FALSE)
+stepl01$anova
+AIC(stepl01)
+### use BIC
+stepl11 <- stepAIC(full.logit2,k=log(nrow(class.train)))
+stepl11$anova
+AIC(stepl11)
+
+summary(stepl11)
+
+pred.valids21 = predict(stepl01,class.valid[,-1],type="response") ##check here
+pred.valids21 <-ifelse(pred.valids21>0.5,"satisfied","neutral or dissatisfied")
+(ctvs21=table(class.valid[,1],pred.valids21))
+diag(prop.table(ctvs21,1))
+sum(diag(prop.table(ctvs21)))
+
+
+pred.valids22 = predict(stepl11,class.valid[,-1],type="response") ##check here
+pred.valids22 <-ifelse(pred.valids22>0.5,"satisfied","neutral or dissatisfied")
+(ctvs22=table(class.valid[,1],pred.valids22))
+diag(prop.table(ctvs22,1))
+sum(diag(prop.table(ctvs22)))
+##https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4842399/
+

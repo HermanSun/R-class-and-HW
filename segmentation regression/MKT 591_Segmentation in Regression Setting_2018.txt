@@ -1,0 +1,109 @@
+
+library(MASS)
+library(mvtnorm)
+library(MCMCpack)
+library(flexmix) #Latent Class Regression
+
+set.seed(1001)
+
+LC_data<-read.csv("lcr.csv",header=TRUE)
+
+Y0<-(LC_data[,2])
+X0<-as.matrix(LC_data[,3:12])
+n<-length(Y0)
+
+result1=lm(Y0~0+X0)
+summary(result1)
+
+m02<-flexmix(Y0~0+X0,k=2)
+summary(m02) #for model selection
+rm02<-refit(m02)
+summary(rm02) #K=2 Model
+post_m02=posterior(m02)
+
+memb_m02=rep(0,n)
+for (i in 1:n){
+memb_m02[i]<-which.max(post_m02[i,])
+} #for getting membership infomation
+
+memb_m02 #print membership
+
+
+###R Running Script with VS Model ####
+## these R functions are provided in blackboard: 
+# also see: https://sites.google.com/a/asu.edu/skim348/home/model-codes
+
+source("mcmcse.R") #for mcmc standard error
+source("reorder_uncon.R")
+source("Unconstraind_Bayes_Mixture.R")
+
+data<-read.csv("vsdata.csv",header=TRUE)
+
+Y=data[,2]
+X=as.matrix(data[,3:22])
+
+result1=lm(Y~0+X)
+summary(result1)
+
+##running flexmix#
+m1<-flexmix(Y~0+X,k=1)
+rm1<-refit(m1)
+summary(rm1) #K=1 Model
+
+m3<-flexmix(Y~0+X,k=3)
+rm3<-refit(m3)
+summary(rm3) #K=3 Model
+
+Results_Unconstrained=Unconstraind_Bayes_Mixture(Y,X,K=3,T0=2000,T=3000);
+#T0: burn-in, T=Sampling
+round(Results_Unconstrained$coefficients,1)
+Var_Sel=matrix(0,p,K)
+
+Var_Sel[which(Results_Unconstrained$'Odds Ratio'>20)]=1 #selected variables
+Results_Unconstrained$memb
+
+###################################
+### Amusement Park Data example ###
+###################################
+
+sat.df<-read.csv("http://goo.gl/HKnl74")
+
+sat.df[,4:7]<-scale(sat.df[,4:7])
+
+attach(sat.df) 
+
+#linear regression
+am2 <- lm(overall ~ rides + games + wait + clean, data=sat.df)
+summary(am2)
+AIC(am2);BIC(am2)
+
+#aggregate regression -- k=1
+amf1<-flexmix(overall ~ rides + games + wait + clean, k=1)
+summary(amf1)
+summary(refit(amf1))
+
+#k=2
+amf2<-flexmix(overall ~ rides + games + wait + clean, k=2)
+summary(amf2)
+summary(refit(amf2))
+
+#k=3
+amf3<-flexmix(overall ~ rides + games + wait + clean, k=3)
+summary(amf3)
+summary(refit(amf3))
+
+#k=4
+amf4<-flexmix(overall ~ rides + games + wait + clean, k=4)
+summary(amf4)
+summary(refit(amf4))
+
+set.seed(1000)
+Y=overall
+X=cbind(1,rides,games,wait,clean)
+
+Results_Unconstrained=Unconstraind_Bayes_Mixture(overall,X,K=2,T0=1000,T=1000);
+round(Results_Unconstrained$coefficients,1)
+
+Var_Sel=matrix(0,p,K) #p:number of IVs, K=number of clusters
+Var_Sel[which(Results_Unconstrained$'Odds Ratio'>10)]=1
+Var_Sel

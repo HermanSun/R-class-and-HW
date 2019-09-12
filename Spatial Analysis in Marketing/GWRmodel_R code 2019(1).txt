@@ -1,0 +1,139 @@
+library(GWmodel)
+library(spgwr)
+library(spdep)
+library(ape)
+
+
+
+#########################
+#### Panel Analysis #####
+#########################
+library(foreign)
+library(plm)
+Panel <-read.dta("http://dss.princeton.edu/training/Panel101.dta")
+head(Panel)
+
+library(car)
+
+scatterplot(y~year|country, boxplots=FALSE, smooth=TRUE, reg.line=FALSE, data=Panel)
+
+ols<-lm(y~x1, data=Panel)
+summary(ols)
+
+#we look a data set of countries over time in years across an artificial dependent variable y and artificial x variable x1. 
+#The model function lets us tell R whether to use fixed or random effects, where in this case "within" means fixed effects. 
+#Then we can get the parameter estimate for x1, which indicates that average amount of change per country over time given a unit increase in x.
+fixed = plm(y ~ x1, data = Panel, index = c("country", "year"), model = "within")
+summary(fixed)
+ols_c<-lm(y~x1+factor(country), data=Panel) #control countries as fixed effects.
+ols_c<-lm(y~0+x1+factor(country), data=Panel) #control countries as fixed effects.
+summary(ols_c)
+
+#country effect is random, not correlated with IVs
+random = plm(y ~ x1, data = Panel, index = c("country", "year"), model = "random")
+summary(random)
+
+#We can use the Hausman Test, where the null hypothesis is that the model is random effects and the alternative is that fixed effects are better fit.
+#In this example, the p-value is above .05 so a random effects model is the better fit for this data.
+phtest(random, fixed)
+
+
+#############################
+###Spatial model example ###
+#example (1) SAR model
+#############################
+data(oldcol)
+#Columbus OH Spatial Analysis Data Set
+
+###Spatial correlation (Moran's I) ###
+
+dists <- as.matrix(dist(cbind(COL.OLD$X, COL.OLD$Y)))
+dists.inv <- 1/dists ## far distance -- small weight
+diag(dists.inv) <- 0
+ 
+dists.inv[1:5, 1:5]
+
+Moran.I(COL.OLD$CRIME, dists.inv)
+
+## simple linear regression
+
+COL.lm <- lm(CRIME ~ INC + HOVAL, data=COL.OLD)
+summary(COL.lm)
+#HOVAL housing value (in \$1,000)
+#INC household income (in \$1,000)
+#CRIME residential burglaries and vehicle thefts per thousand households in the neighborhood
+
+
+COL.lag.eig <- lagsarlm(CRIME ~ INC + HOVAL, data=COL.OLD,
+ nb2listw(COL.nb, style="W"), method="eigen", quiet=FALSE)
+summary(COL.lag.eig, correlation=TRUE) ## spatial autoregressive model
+# SAR model: http://www.econ.uiuc.edu/~lab/workshop/Spatial_in_R.html
+
+#example (2) GWR model
+
+data(LondonHP)
+DM<-gw.dist(dp.locat=coordinates(londonhp))
+##Compare the time consumed with and without a specified distance matrix
+
+## specify an optimum bandwidth by cross-validation appraoch
+bw1<-bw.gwr(PURCHASE~FLOORSZ, data=londonhp, kernel = "gaussian",dMat=DM)
+gwr.res1<-gwr.basic(PURCHASE~FLOORSZ, data=londonhp, bw=bw1,kernel = "gaussian",
+dMat=DM)
+gwr.res1
+
+gwr.res1$SDF[1:10,]
+
+### Data Description about LondonHP (London House Price Data set ###
+#PURCHASE a numeric vector, the purchase price of the property
+#FLOORSZ a numeric vector, floor area of the property in square metres
+
+#################################################
+## Example with a TripAdvisor Restaurant Data ###
+#################################################
+
+setwd("F:/Arizona State University/Spring 2019/Marketing Analytics 2019/2019/12. Geographical Analysis")
+
+GData=read.csv("BelgiumRestaurantsReviewsTripAdviors70.csv", head=TRUE)
+
+Co_uv=as.matrix(GData[,3:4]);
+X=as.matrix(GData[,8:10]); 
+Y=GData[,5];
+data1=data.frame(Y,X)
+
+dists <- as.matrix(dist(cbind(GData$Latitude, GData$Longitude)))
+dists.inv <- 1/dists ## far distance -- small weight
+diag(dists.inv) <- 0
+ 
+dists.inv[1:5, 1:5]
+dists.inv[is.infinite(dists.inv)] <- 100000
+
+Moran.I(Y, dists.inv)
+
+########spgwr##################
+col.bw <- gwr.sel(Y~0+X, coords=Co_uv) #Selection of bandwidth with CV
+# it takes time -- huge computation... 
+# so, let's fix 1 for bandwidth
+col.bw=1
+
+results_gwr=gwr(Y~0+X, coords=Co_uv,   bandwidth=col.bw)
+
+results_gwr$SDF[1:10,]
+
+########## GWmodel(another package, it takes time..) ######
+data2=SpatialPointsDataFrame(Co_uv,data1)
+
+X1=X[,1];X2=X[,2];X3=X[,3]
+
+DM<-gw.dist(dp.locat=Co_uv) #Euclidian distance
+
+bw1<-bw.gwr(Y~0+X,data=data2 ,kernel = "exponential",dMat=DM)
+
+bw1=1
+gwr.res1<-gwr.basic(Y~0+X1+X2+X3,data=data2, bw=bw1,kernel = "exponential",dMat=DM)
+res1=gwr.res1$SDF
+coeffs=cbind(res1$X1,res1$X2,res1$X3)
+dim(coeffs)
+
+XSE=cbind(res1$X1_SE,res1$X2_SE,res1$X3_SE)
+tstat=coeffs/XSE #approximately tstat larger than 2 means significant.
+

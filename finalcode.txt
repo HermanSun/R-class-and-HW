@@ -1,0 +1,111 @@
+####Discrete# nominal and ordinal
+###CrossTab, frequence
+mytable=t(table(CrossTab[,2],CrossTab[,3])) #t()transpose
+mytable
+table(CrossTab[,2],CrossTab[,3])
+chisq.test(mytable)
+
+library(gmodels)
+CrossTable(Recomm,dnn=c("Recomm"))
+CrossTable(AccountSize,dnn=c("AcctSize"))
+CrossTable(CrossTab[,3],CrossTab[,2],dnn=c("Recommendation","AcctSize"))
+
+AccountSize=CrossTab[,2]
+AccountSize
+AccountSize[AccountSize==1]="Small"
+AccountSize[AccountSize==2]="Medium"
+AccountSize[AccountSize==3]="Large"
+AccountSize
+Recomm=CrossTab[,3]
+Recomm[Recomm==0]="Not_Recomm"
+Recomm[Recomm==1]="Yes_Recomm"
+Recomm
+
+CrossTable(Recomm,AccountSize,chisq=TRUE,expected=TRUE,dnn=c("Recomm","AcctSize"))
+dotchart(table(Recomm,AccountSize))
+
+
+### Logistic Regression
+
+
+
+
+
+
+
+##Continuous interval and ratio
+#### correlation, descriptive statistics mean variance
+Corr=read.csv("Correlation_Example(1).csv",,header=TRUE);
+price <-Corr[,2];
+sales<-Corr[,3];
+price
+sales
+plot(price,sales)
+cor(price,sales,method = "pearson", use="complete.obs")
+cor.test(price,sales,method="pearson", use="complete.obs")
+abline(lm(sales~price),col="red") # regression line
+lines(lowess(price,sales),col="blue") # lowess line locally weighted smoothing line
+library(Hmisc)
+rcorr(cbind(price,sales),type="pearson")
+
+
+# normal regression
+# linear regression
+sat.df<-read.csv("http://goo.gl/HKnl74")
+dim(sat.df)
+sat.df[1:4,]
+
+str(sat.df)
+
+install.packages("gpairs")
+library(gpairs)
+gpairs(sat.df)
+####
+hist(sat.df$distance)
+library(corrplot)
+sat.df$logdist <-log(sat.df$distance)
+hist(sat.df$logdist)
+
+colnames(sat.df) 
+corrplot.mixed(cor(sat.df[,c(2,4:9)]),upper="ellipse") # 8 rather 9
+
+# rides as independent
+m1=lm(overall~rides, data=sat.df)# lm linear model
+summary(m1)
+# plot
+plot(overall~rides,data=sat.df,xlab="Satisfaction with Rides", ylab="Overall Satisfaction")
+abline(m1)
+plot(m1$fitted.values, m1$residuals)
+## prediction
+betas=m1$coefficients
+new_value=95
+sum(betas[1]+betas[2]*new_value)
+###confidence
+confint(m1)
+
+#prediction
+#####
+m_g=lm(overall~games,data=sat.df)
+summary(m_g)
+#games
+betas=m_g$coefficients
+new_values=70
+sum(betas[1]+betas[2]*new_value)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
