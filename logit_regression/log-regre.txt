@@ -1,0 +1,122 @@
+xBeta=-10
+exp(xBeta)/(exp(xBeta)+1)
+plogis(-Inf)
+plogis(2)
+plogis(0)
+plogis(-10)
+
+xB=seq(-10,10,by=0.01)
+logist=plogis(xB)
+plot(logist,type="l",xlab="xB",ylab="probability")
+
+###logit
+log(.88/(1-.88))
+qlogis(.88)
+
+#############In-Class Catalog
+Catalog <-read.csv("Catalog.csv",head=TRUE)
+attach(Catalog)
+
+res_Catalog <- glm(Choice~Recency+Frequency+Monetary, family=binomial("logit"))
+summary(res_Catalog)
+
+# prediction" internal sample
+n=dim(Catalog)[1] # sample size
+n
+pred=predict.glm(res_Catalog, Catalog,type="response")
+pred[1:10]
+pred.C=rep(0,n)
+pred.C[1:10]
+pred.C[pred>0.5]=1
+table(pred.C)
+pred.C[1:10]
+table(Catalog[,5],pred.C)
+
+
+### prediction for new data
+NewData1=data.frame(4,9,66.71)
+NewData1
+colnames(NewData1)=c("Recency","Frequency","Monetary")
+NewData1
+predict(res_Catalog,NewData1,type="link")# log odds probability less than 0.5
+n1<-predict(res_Catalog,NewData1,type="response") #predicted probability
+n1
+log(n1/(1-n1))
+
+NewData2=data.frame(5,8,70)
+colnames(NewData2)=c("Recency","Frequency","Monetary")
+NewData1
+NewData2
+predict(res_Catalog,NewData2,type="link") #log odds
+predict(res_Catalog,NewData2,type="response") #predicted probability
+
+
+
+
+####Customer Acquisition Example
+JDPowers <-read.csv("JDPowers.csv",head=TRUE)
+JDPowers
+attach(JDPowers)
+JDPowers
+Email = as.factor(Email)
+Coupon=as.factor(Coupon)
+res_JD <-glm(Customer~Distance+Billboard+Email+Coupon, family=binomial)
+summary(res_JD)
+
+
+##new data
+NewData2=data.frame(2,30,as.factor(0),as.factor(1))
+colnames(NewData2)=c("Distance","Billboard","Email","Coupon")
+predict(res_JD,NewData2,type="response") #predicted p
+
+
+
+
+#####Bank Marketing Data
+bank=read.csv("bank-additional-full.csv",head=TRUE)
+dim(bank)
+head(bank)
+set.seed(100)
+## split the data to train and validation data
+## data segmentation data loading
+train.prop=.75
+train.cases = sample(nrow(bank), nrow(bank)*train.prop)
+train.cases[1:100]
+length(train.cases)
+head(train.cases)
+
+## using age, marital, housing ,duration
+class.train = bank[train.cases,c(1,3,6,11,14,21)]
+class.valid = bank[-train.cases,c(1,3,6,11,14,21)]
+class.train$marital <-as.factor(class.train[,2])
+class.train$housing <-as.factor(class.train[,3])
+ Y.train = class.train[,6]
+X.train = class.train[,-6]
+n=dim(X.train)[1] #number of observations
+
+# training data set
+fit.logit <-glm(y~age+marital+housing+duration,,data=class.train, family=binomial("logit"))
+
+## prepare dummy IVs for prediction
+#categorical variable
+pred.train=predict(fit.logit,class.train[,-6], type="response")## check here
+pred.train <- ifelse(pred.train>0.5,1,0)
+(ct=table(Y.train, pred.train))
+diag(prop.table(ct,1))### hit rate
+sum(diag(prop.table(ct)))
+### valid data set prediction hitting for external samples
+class.valid$marital <- as.factor(class.valid[,2])
+class.valid$housing <-as.factor(class.valid[,3])
+pred.valid = predict(fit.logit,class.valid[,-6],type="response") ##check here
+pred.valid <-ifelse(pred.valid>0.5,1,0)
+(ctv=table(class.valid[,6],pred.valid))
+diag(prop.table(ctv,1))
+ # hit rate
+sum(diag(prop.table(ctv)))
+# CrossTab
+table(bank[,21])/dim(bank)[1]
+library(gmodels)
+Cross1=CrossTable(class.valid[,6],pred.valid)
+
+CrossTv=table(class.valid[,6],pred.valid)
+CrossTv[2,2]/(dim(class.valid)[1]-CrossTv[1,1]) #similarity of asymmetric binary attributes

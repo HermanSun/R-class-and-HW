@@ -1,0 +1,78 @@
+##################################
+### MultinomialLogitRegression ###
+##################################
+
+install.packages("foreign")
+install.packages("nnet")
+install.packages("reshape2")
+
+
+library(foreign)
+library(nnet)
+library(reshape2)
+
+ml <- read.dta("https://stats.idre.ucla.edu/stat/data/hsbdemo.dta")
+
+ml[1:10,]
+table(ml[,5])
+
+## reference group is "general"
+test <- multinom(prog ~ ses + write, data = ml)
+
+
+## you can change reference group as below
+ml$prog2 <- relevel(ml$prog, ref = "academic")
+
+test <- multinom(prog2 ~ ses + write, data = ml)
+summary(test)
+
+
+## read the following Website for further details
+## https://stats.idre.ucla.edu/r/dae/multinomial-logistic-regression/
+
+###################################
+### Ordinal Logistic Regression ###
+###################################
+
+library(MASS)
+##http://r-statistics.co/Ordinal-Logistic-Regression-With-R.html
+
+carsdata <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/car/car.data", header=F, stringsAsFactors=F)
+
+colnames(carsdata) <- c("buying", "maint", "doors", "persons", "lug_boot", "safety", "class") 
+
+carsdata$buying <- factor(carsdata$buying, levels=c("low", "med", "high", "vhigh"), ordered=TRUE)
+carsdata$maint <- factor(carsdata$maint, levels=c("low", "med", "high", "vhigh"), ordered=TRUE)
+carsdata$doors <- factor(carsdata$doors, levels=c("2", "3", "4", "5more"), ordered=TRUE)
+carsdata$persons <- factor(carsdata$persons, levels=c("2", "4", "more"), ordered=TRUE)
+carsdata$lug_boot <- factor(carsdata$lug_boot, levels=c("small", "med", "big"), ordered=TRUE)
+carsdata$safety <- factor(carsdata$safety, levels=c("low", "med", "high"), ordered=TRUE)
+carsdata$class <- factor(carsdata$class, levels=c("unacc", "acc", "good", "vgood"), ordered=TRUE)
+
+#CV - Selecting 70% Training data 
+
+set.seed(1001)
+trainingRows <- sample(1:nrow(carsdata), 0.7 * nrow(carsdata))
+trainingData <- carsdata[trainingRows, ]
+testData <- carsdata[-trainingRows, ]
+
+
+options(contrasts = c("contr.treatment", "contr.poly"))
+polrMod <- polr(class ~ safety + lug_boot + doors + buying + maint, data=trainingData)
+summary(polrMod)
+
+
+predictedClass <- predict(polrMod, testData)  # predict the classes directly
+head(predictedClass)
+
+
+table(testData$class, predictedClass)  # confusion matrix
+
+n<-dim(testData)[1]
+
+sum(diag(table(testData$class, predictedClass)))/n
+
+
+## we can apply the ordinal data to multinomial Logistic Regression
+test <- multinom(class ~ safety + lug_boot + doors + buying + maint, data=trainingData)
+summary(test)
