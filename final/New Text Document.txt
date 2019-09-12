@@ -1,0 +1,243 @@
+final=read.csv("Marketing Analytics Final Exam data_2019.csv",,header=TRUE);
+head(final)
+summary(final) ##q1
+
+cor.test(final$Time_VideoSite,final$OverallSat,method="pearson", use="complete.obs")##q2
+
+
+library(gmodels)
+
+CrossTable(final$isStudent,final$motivation,chisq=TRUE,expected=TRUE,dnn=c("Student","motivation"))
+dotchart(table(final$isStudent,final$motivation)) ## q3q4q5
+
+install.packages("nFactors")
+library(nFactors)
+install.packages("Hmisc")
+library(Hmisc)
+install.packages("GPArotation")
+library(GPArotation)
+attach(final)
+eigen(cor(final[,5:9])) #q6
+fs<-factanal(final[,5:9],factors=2, rotation="varimax")
+fs##q7 q8
+
+factanal(final[,4:9],factors=3, rotation="varimax")#q9
+
+
+factanal(final[,4:9], factors=2, rotation="oblimin#q10
+
+
+f1 <-lm(OverallSat~EasyOfUseRating+ NewContentsRating+ DesignRating+ ReliabilityRating+ SportsContentsRating,data=final)
+summary(f1)#q11 q12
+
+f2 <-lm(OverallSat~EasyOfUseRating+ NewContentsRating+ DesignRating+ ReliabilityRating+ SportsContentsRating+Time_VideoSite ,data=final)
+summary(f2)  #q13
+BIC(f1);BIC(f2)
+
+
+factor_res=factanal(final[,5:9], factors=2,rotation="varimax", scores="Bartlett") 
+
+fX=as.matrix(factor_res$scores) #IVs from factor scores.
+Y=final$OverallSat
+
+## lm analysis with factor scores ###
+
+summary(lm(Y~fX)) ##q14
+m=as.factor(final$motivation)
+s=as.factor(final$isStudent)
+summary(lm(final$Time_VideoSite~ s + m))#q15 16
+l2=lm(final$Time_VideoSite~ s + m) #q16
+coef=l2$coefficient
+coef[1]+coef[2]+coef[3] #q17
+
+
+
+l3=lm(Time_VideoSite~isStudent+Time_Online+isStudent:Time_Online,data=final)
+summary(l3)#q18
+
+#Please run a binary logit model (binary logistic regression) 
+#to predict dependent variable of BuyPremiumMemb 
+#to the service site using 
+#isStudent, isEmployed and motivation. 
+#If a new consumer is an employed student 
+#and tying to use this site for convenience benefit, 
+#what is the probability of buying a premium membership?
+
+
+buy=as.factor(final$BuyPremiumMemb)
+table(buy)
+s=as.factor(final$isStudent)
+e=as.factor(final$isEmployed)
+table(e)
+m=as.factor(final$motivation)
+#res_Catalog <- glm(buy~s+e + m, family=binomial("logit"))
+res_Catalog <- glm(BuyPremiumMemb~isStudent+ isEmployed + m,data=final, family=binomial("logit"))
+summary(res_Catalog)
+NewData1=data.frame(1,1,factor(2))
+colnames(NewData1)=c("isStudent","isEmployed","m")
+NewData1
+n1<-predict(res_Catalog,NewData1,type="response") #predicted probability
+n1 ##19
+predict(res_Catalog,NewData1,type="link")# log odds probability less than 0.5 =log(n1/(1-n1))
+log(n1/(1-n1))
+
+res_Catalog1 <- glm(BuyPremiumMemb~isStudent+ isEmployed + m+Time_Online,data=final, family=binomial("logit"))
+summary(res_Catalog1) #q 20
+
+###Assuming a customer is known to be 
+#an unemployed student 
+#who use the streaming site for pursuing money-for-value 
+#and the customer uses Internet with average
+# 400 minutes per week, what is the probability of buying a Premium membership (use the results of the logit regression from question 20)?
+
+NewData2=data.frame(1,0,factor(1),400)
+colnames(NewData2)=c("isStudent","isEmployed","m","Time_Online")
+NewData2
+n2<-predict(res_Catalog1,NewData2,type="response") #predicted probability
+n2 ##q 21
+
+
+pred.train=predict(res_Catalog1,final, type="response")## check here
+pred.train <- ifelse(pred.train>0.5,1,0)
+(ct=table(BuyPremiumMemb, pred.train))
+diag(prop.table(ct,1))### hit rate
+sum(diag(prop.table(ct)))
+library(gmodels)
+Cross1=CrossTable(BuyPremiumMemb,pred.train)
+
+CrossTv=table(BuyPremiumMemb,pred.train)
+CrossTv #q22
+
+library(rpart)
+set.seed(100)
+library(cluster);
+
+
+library(MASS)
+library(ggplot2)
+library(gmodels)
+
+
+head(final)
+CART_fit <- rpart(BuyPremiumMemb ~ Frequency+isStudent +isEmployed + motivation , data=final, method="class") #when y is factor
+
+printcp(CART_fit) # display the results ###q23#
+summary(CART_fit) # detailed summary of splits
+plot(CART_fit, uniform=TRUE, 
+    main="Investment Classification Tree")
+ text(CART_fit, use.n=TRUE, all=TRUE, cex=.8)
+
+
+
+#Please run the Linear Discriminant Analysis (LDA) using 6 continuous variables of 
+#EasyOfUseRating (X1), NewContentsRating (X2), DesignRating (X3), 
+#ReliabilityRating (X4), SportsContentsRating (X5), and Time_Online. 
+#(Note, DV is BuyPremiumMemb.)  
+#What are the coefficients for X4 and X5 of linear discriminants equation line? 
+#Note, please use normalization (‘scale’ in R) before running the LDA.
+
+X1=scale(EasyOfUseRating)
+
+X2=scale(NewContentsRating)
+X3=scale(DesignRating)
+X4=scale(ReliabilityRating)
+X5=scale(SportsContentsRating)
+Time_on=scale(Time_Online)
+
+fit.lda<- lda(BuyPremiumMemb~ X1+ X2 + X3 + X4+X5+Time_on)
+fit.lda
+plot(fit.lda, dimen=1, type="both") #q24
+
+library(klaR)
+partimat(BuyPremiumMemb ~ X1+ X2 + X3 + X4+X5+Time_on,method="qda")
+
+fit.qda<- qda(BuyPremiumMemb ~ X1+ X2 + X3 + X4+X5+Time_on)
+fit.qda1 = predict(fit.qda, final)
+
+ 
+CrossTv=table(BuyPremiumMemb , fit.qda1$class)
+CrossTv
+dim(final)
+CrossTv[2,2]/(dim(final)[1]-CrossTv[1,1]) #jaccard similarity index #q25
+
+
+
+library(cluster)
+
+seg.df<-final[,c(3,4,14)]
+seg.dist<-daisy(seg.df) #compute dissimilarity matrix, default=euclidean distance
+# daisy: The handling of nominal, ordinal, and (a)symmetric binary data is 
+#achieved by using the general dissimilarity coefficient of Gower (1971).
+
+as.matrix(seg.dist)[1:5,1:5]
+dim(as.matrix(seg.dist)) #distances between 300 members
+
+seg.hc<-hclust(seg.dist, method="complete")
+# complete linkage method evaluates the distance between every member
+plot(seg.hc) #resulting tree for all N=300 observations of seg.df.
+
+
+rect.hclust(seg.hc, k=3, border="red") #prespecified K=4
+
+
+seg.hc.segment <- cutree(seg.hc, k=3) #membership for 4 groups
+summary(seg.hc.segment)
+table(seg.hc.segment)
+CrossTable(BuyPremiumMemb,seg.hc.segment)##q26
+seg.summ(seg.df, seg.hc.segment) 
+
+seg.summ<-function(data,groups){
+aggregate(data, list(groups), function(x) mean(as.numeric(x)))
+} # computing segment-level mean values
+
+library(mclust)
+set.seed(1000)
+
+tooth.mc <- Mclust(final[,c(3,4)])
+summary(tooth.mc) # the model search based selection information criteria
+
+clusplot(final, tooth.mc$class, color=TRUE, shade=TRUE, 
+	labels=4, lines=0, main="Model-based cluster plot")
+
+BIC <- mclustBIC(final)
+plot(BIC)
+
+CrossTable(BuyPremiumMemb,tooth.mc$class )
+CrossTable(isStudent,tooth.mc$class )
+seg.summ(final, tooth.mc$class)###q27
+
+
+
+set.seed(1000)
+
+tooth.k<-kmeans(final[,c(5,9)], centers=3)
+
+tooth.k$cluster
+table(tooth.k$cluster)
+
+# boxplot in terms of "prevent cavity"
+boxplot(final$EasyOfUseRating~tooth.k$cluster, ylab="Prevent", xlab="Cluster")
+
+seg.summ(final, tooth.k$cluster) ###q28
+
+CrossTable(BuyPremiumMemb,tooth.k$cluster )
+
+
+
+
+tooth.k1<-kmeans(EasyOfUseRating +NewContentsRating+ DesignRating+ ReliabilityRating+ SportsContentsRating, centers=3)
+tooth.k1$cluster
+seg.summ(final, tooth.k1$cluster) ###q28
+
+
+
+
+
+
+
+
+
+
+
+
+

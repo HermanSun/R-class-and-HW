@@ -1,0 +1,331 @@
+set.seed(100)
+factor.qual=read.csv("ServQual.csv",header=TRUE)
+###############
+#####Factor Analysis
+### they are similar but better interpretability over PCA method
+install.packages("nFactors")
+library(nFactors)
+install.packages("Hmisc")
+library(Hmisc)
+install.packages("GPArotation")
+library(GPArotation)
+
+
+
+nScree(factor.qual[,3:24]) # estimate the number of factors from scree tests
+eigen(cor(factor.qual[,3:24])) #selection heuristics - eigenvalue 1
+
+factanal(factor.qual[,3:24],factors=1, rotation="varimax")
+factanal(factor.qual[,3:24],factors=3, rotation="varimax")
+factanal(factor.qual[,3:24],factors=3, rotation="oblimin")
+
+factor_res=factanal(factor.qual[,3:24], factors=3,rotation="varimax", scores="Bartlett")
+factor_res
+
+X=as.matrix(factor.qual[,3:24])
+fX=as.matrix(factor_res$scores) #IVs from factor scores.
+Y=factor.qual[,1]
+summary(lm(Y~X))
+summary(lm(Y~fX))
+BIC(lm(Y~X))
+BIC(lm(Y~fX))
+
+factor_res2=factanal(factor.qual[,3:24], factors=3,rotation="oblimin", scores="Bartlett")
+factor_res2
+
+
+fX2=as.matrix(factor_res2$scores) #IVs from factor scores.
+Y=factor.qual[,1]
+summary(lm(Y~X))
+summary(lm(Y~fX2))
+BIC(lm(Y~X))
+BIC(lm(Y~fXx))
+
+
+SUV.ratings <-read.csv("LargeSUVAttributes.csv")
+SUV.ratings[1:5,]
+
+## Brand ratings data --useful for perceptual map
+
+SUV.pc <-prcomp(SUV.ratings[,2:14]) #PCA
+summary(SUV.pc)
+SUV.pc
+
+
+###First, compute distance matrix across 13 large SUV brands using 13 attributes 
+#(from 2nd column to 14 columns). 
+#Note, please don’t include both ‘Ford’ and ‘GM’ to compute distance matrix. 
+#Then, using commands ‘cmdscale’ in R, draw two-dimensional perceptual map. 
+#In the positioning map, what is a competitor of Lexus LX 470 in consumers’ perception?
+
+
+library(FactoMineR)
+
+# compute mean across 10 brands
+
+brand.mean <-aggregate(SUV.ratings[,2:14],list(SUV.ratings[,1]),mean)
+# aggregate function we learned last class
+brand.mean
+brand.mean1 <-brand.mean[,-1]# exclude brand column
+brand.mean1
+rownames(brand.mean1)<-letters[1:13]# change row names
+brand.mean1
+brand.mu.pc <- prcomp(brand.mean1,scale=TRUE)
+brand.mu.pc
+summary(brand.mu.pc)
+
+biplot(brand.mu.pc,main="Brand positioning", cex=c(0.75,0.75))
+
+cor(SUV.ratings[,2:14]) 
+
+brand.dist <-dist(brand.mean1)
+(brand.mds <-cmdscale(brand.dist))
+
+plot(brand.mds,type="n")
+rownames(brand.mds)<-paste("",letters,sep="")[1:13] #change row names
+text(brand.mds,rownames(brand.mds),cex=1)
+
+train <-read.csv("bank.train.csv")
+valid <-read.csv("bank.valid.csv")
+
+dim(train)
+n<-dim(train)[2]
+n
+y <- as.factor(train[,4])
+X.age=scale(train[,1]); X.dur=scale(train[,2]);
+X.pre=scale(train[,3]);
+
+
+library(MASS)
+library(ggplot2)
+library(gmodels)
+install.packages("klaR")
+library(klaR)
+
+#fit.lda<- lda(y ~ X.age+X.dur+X.pre)
+fit.lda<- lda(y ~., data=train)
+fit.lda
+
+plot(fit.lda, dimen=1, type="both") 
+##### to here
+no=which(y=="no") #which are 0 for DV
+no
+length(no) #sample size for the Class=0
+
+#Example: compute no Z mean score...
+mean(X.age[no]*fit.lda$scaling[1]
++X.dur[no]*fit.lda$scaling[2]
++X.pre[no]*fit.lda$scaling[3]) ##Z score for Low
+
+mean(X.age[no]) #check this in fit.lda results
+# for prediction
+fit.lda1 = predict(fit.lda)
+
+
+(ct<-table(y, fit.lda1$class)) #classification table
+
+CrossTable(y, fit.lda1$class)
+
+
+fit.lda2 = predict(fit.lda, valid)
+
+(ct<-table(valid$y, fit.lda2$class))
+
+set.seed(100)
+factor.qual=read.csv("ServQual.csv",header=TRUE)
+###############
+#####Factor Analysis
+### they are similar but better interpretability over PCA method
+install.packages("nFactors")
+library(nFactors)
+install.packages("Hmisc")
+library(Hmisc)
+install.packages("GPArotation")
+library(GPArotation)
+
+
+
+nScree(factor.qual[,3:24]) # estimate the number of factors from scree tests
+eigen(cor(factor.qual[,3:24])) #selection heuristics - eigenvalue 1
+
+factanal(factor.qual[,3:24],factors=1, rotation="varimax")
+factanal(factor.qual[,3:24],factors=3, rotation="varimax")
+factanal(factor.qual[,3:24],factors=3, rotation="oblimin")
+
+factor_res=factanal(factor.qual[,3:24], factors=3,rotation="varimax", scores="Bartlett")
+factor_res
+
+X=as.matrix(factor.qual[,3:24])
+fX=as.matrix(factor_res$scores) #IVs from factor scores.
+Y=factor.qual[,1]
+summary(lm(Y~X))
+summary(lm(Y~fX))
+BIC(lm(Y~X))
+BIC(lm(Y~fX))
+
+factor_res2=factanal(factor.qual[,3:24], factors=3,rotation="oblimin", scores="Bartlett")
+factor_res2
+
+
+fX2=as.matrix(factor_res2$scores) #IVs from factor scores.
+Y=factor.qual[,1]
+summary(lm(Y~X))
+summary(lm(Y~fX2))
+BIC(lm(Y~X))
+BIC(lm(Y~fXx))
+
+
+SUV.ratings <-read.csv("LargeSUVAttributes.csv")
+SUV.ratings[1:5,]
+
+## Brand ratings data --useful for perceptual map
+
+SUV.pc <-prcomp(SUV.ratings[,2:14]) #PCA
+summary(SUV.pc)
+SUV.pc
+
+
+###First, compute distance matrix across 13 large SUV brands using 13 attributes 
+#(from 2nd column to 14 columns). 
+#Note, please don’t include both ‘Ford’ and ‘GM’ to compute distance matrix. 
+#Then, using commands ‘cmdscale’ in R, draw two-dimensional perceptual map. 
+#In the positioning map, what is a competitor of Lexus LX 470 in consumers’ perception?
+
+
+library(FactoMineR)
+
+# compute mean across 10 brands
+
+brand.mean <-aggregate(SUV.ratings[,2:14],list(SUV.ratings[,1]),mean)
+# aggregate function we learned last class
+brand.mean
+brand.mean1 <-brand.mean[,-1]# exclude brand column
+brand.mean1
+rownames(brand.mean1)<-letters[1:13]# change row names
+brand.mean1
+brand.mu.pc <- prcomp(brand.mean1,scale=TRUE)
+brand.mu.pc
+summary(brand.mu.pc)
+
+biplot(brand.mu.pc,main="Brand positioning", cex=c(0.75,0.75))
+
+cor(SUV.ratings[,2:14]) 
+
+brand.dist <-dist(brand.mean1)
+(brand.mds <-cmdscale(brand.dist))
+
+plot(brand.mds,type="n")
+rownames(brand.mds)<-paste("",letters,sep="")[1:13] #change row names
+text(brand.mds,rownames(brand.mds),cex=1)
+
+train <-read.csv("bank.train.csv")
+valid <-read.csv("bank.valid.csv")
+
+dim(train)
+n<-dim(train)[2]
+n
+y <- as.factor(train[,4])
+X.age=scale(train[,1]); X.dur=scale(train[,2]);
+X.pre=scale(train[,3]);
+
+
+library(MASS)
+library(ggplot2)
+library(gmodels)
+install.packages("klaR")
+library(klaR)
+
+#fit.lda<- lda(y ~ X.age+X.dur+X.pre)
+fit.lda<- lda(y ~., data=train)
+fit.lda
+
+plot(fit.lda, dimen=1, type="both") 
+##### to here
+no=which(y=="no") #which are 0 for DV
+no
+length(no) #sample size for the Class=0
+
+#Example: compute no Z mean score...
+mean(X.age[no]*fit.lda$scaling[1]
++X.dur[no]*fit.lda$scaling[2]
++X.pre[no]*fit.lda$scaling[3]) ##Z score for Low
+
+mean(X.age[no]) #check this in fit.lda results
+# for prediction
+fit.lda1 = predict(fit.lda)
+
+
+(ct<-table(y, fit.lda1$class)) #classification table
+
+CrossTable(y, fit.lda1$class)
+
+
+fit.lda2 = predict(fit.lda, valid)
+
+(ct<-table(valid$y, fit.lda2$class))
+
+CrossTable(valid$y, fit.lda2$class)
+mean(valid$y==fit.lda2$class)
+
+CrossTv=table(valid$y, fit.lda2$class)
+CrossTv[2,2]/(dim(valid)[1]-CrossTv[1,1]) #jaccard similarity index
+
+library(e1071);
+fit.nb<- naiveBayes(y ~., data=train)
+fit.nb
+fit.nb.class <- predict(fit.nb, valid) 
+mean(valid$y==fit.nb.class) # prediciton hit rate
+CrossTv1=table(valid$y, fit.nb.class)
+CrossTv1[2,2]/(dim(valid)[1]-CrossTv1[1,1]) #jaccard similarity index
+
+
+library(rpart)
+set.seed(100)
+CART_fit.inv <- rpart(y ~ .,data=train, method="class") #when y is factor
+printcp(CART_fit.inv) # display the results 
+summary(CART_fit.inv) #
+set.seed(100)
+library(randomForest)
+
+seg.rf <- randomForest(y ~., data=train, ntree=500)
+
+seg.rf.class.all<-predict(seg.rf, valid, predict.all=TRUE)
+
+n=dim(valid)[1]
+
+seg.rf.class<-seg.rf.class.all$aggregate #predicted classification
+
+table(valid$y,seg.rf.class) # prediction
+CrossTable(valid$y, seg.rf.class)
+
+CrossTv2=table(valid$y, seg.rf.class)
+CrossTv2[2,2]/(dim(valid)[1]-CrossTv2[1,1]) #jaccard similarity index
+
+x1=c(0,0,1,1)
+x2=c(0,1,0,1)
+y1=3*(x1+x2)-5
+y1<- ifelse(y1>0,1,0)
+y2=1-4*(x1+x2)
+
+y2<- ifelse(y2>0,1,0)
+
+Y=2*(y1+y2)-1
+Y<- ifelse(Y>0,1,0)
+Y
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

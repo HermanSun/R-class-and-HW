@@ -1,0 +1,175 @@
+####################################
+#####Simplifying data (Dimension Reduction)
+
+#### Import Bank data
+
+factor.bank=read.csv("bank.csv",header=TRUE)
+###############
+#####Factor Analysis
+### they are similar but better interpretability over PCA method
+install.packages("nFactors")
+library(nFactors)
+install.packages("Hmisc")
+library(Hmisc)
+install.packages("GPArotation")
+library(GPArotation)
+
+############ 1. Bank Sample Example
+
+rcorr(as.matrix(factor.bank[,2:6]),type="pearson") ## statistical testing
+
+nScree(factor.bank[,2:6]) # estimate the number of factors from scree tests
+eigen(cor(factor.bank[,2:6])) #selection heuristics - eigenvalue 1
+
+factanal(factor.bank[,2:6],factors=2) # factor analysis for 2 factors
+factanal(factor.bank[,2:6],factors=2, rotation="varimax")
+# rotation "oblique" -- allows correlations between factors.
+(bank_res <- factanal(factor.bank[,2:6], factors=2, rotation="oblimin"))
+
+factor_res=factanal(factor.bank[,2:6], factors=2, scores="Bartlett") # factor analysis for 2 factors
+dim(factor_res$scores)
+head(factor_res$scores)
+
+X=as.matrix(factor.bank[,2:6])
+fX=as.matrix(factor_res$scores) #IVs from factor scores.
+Y=factor.bank[,7]
+
+## lm analysis with factor scores ###
+summary(lm(Y~X))
+summary(lm(Y~fX))
+
+####################################
+#####Simplifying data (Dimension Reduction)
+
+#### Import Bank data
+
+factor.bank=read.csv("bank.csv",header=TRUE)
+###############
+#####Factor Analysis
+### they are similar but better interpretability over PCA method
+install.packages("nFactors")
+library(nFactors)
+install.packages("Hmisc")
+library(Hmisc)
+install.packages("GPArotation")
+library(GPArotation)
+
+############ 1. Bank Sample Example
+factor.bank
+corr.test(as.matrix(factor.bank[,2:6]))
+
+rcorr(as.matrix(factor.bank[,2:6]),type="pearson") ## statistical testing
+
+
+nScree(factor.bank[,2:6]) # estimate the number of factors from scree tests
+eigen(cor(factor.bank[,2:6])) #selection heuristics - eigenvalue 1
+
+factanal(factor.bank[,2:6],factors=2) # factor analysis for 2 factors
+factanal(factor.bank[,2:6],factors=2, rotation="varimax")
+# rotation "oblique" -- allows correlations between factors.
+(bank_res <- factanal(factor.bank[,2:6], factors=2, rotation="oblimin"))
+
+factor_res=factanal(factor.bank[,2:6], factors=2, scores="Bartlett") # factor analysis for 2 factors
+
+dim(factor_res$scores)
+head(factor_res$scores)
+
+X=as.matrix(factor.bank[,2:6])
+fX=as.matrix(factor_res$scores) #IVs from factor scores.
+Y=factor.bank[,7]
+
+## lm analysis with factor scores ###
+summary(lm(Y~X)) ### correlation between variables result in high p value in variables' t-test but low p value of F test
+summary(lm(Y~fX))
+
+BIC(lm(Y~X))
+BIC(lm(Y~fX))
+
+
+######## Simplifying Data (Dimension Reduction
+
+##2 Loading Brand_Ratings data
+brand.ratings <-read.csv("http://goo.gl/IQl8nc")
+
+brand.sc <-brand.ratings
+brand.sc[,1:9] <- scale(brand.ratings[,1:9]) # scale function: standardization
+
+summary(brand.sc)
+
+###################
+######Factor Analysis
+##################
+## they are similar but better interpretability over PCA method
+
+library(nFactors)
+library(Hmisc)
+library(GPArotation)
+
+###############2. Brand Ratings (Textbook Example)
+
+rcorr(as.matrix(brand.sc[,1:9]), type="pearson") # statistical testing
+corr.test(as.matrix(brand.sc[,1:9]))
+nScree(brand.sc[,1:9])  # estimate the number of factors from scree tests.
+eigen(cor(brand.sc[,1:9])) # selection heuristics - eigenvalue 1
+
+factanal(brand.sc[,1:9], factors=3) # factor analysis for 3 factors
+
+# for factor loadings, better interpretability than PCA but not specific yet...
+
+factor_res=factanal(brand.sc[,1:9],factors=3, scores="Bartlett") # factor analysis for 3 factors
+dim(factor_res$scores)
+head(factor_res$scores)
+
+## Rotation ##
+#rotation "oblique" -- allows correlations
+(brand.fa.ob <- factanal(brand.sc[,1:9], factors=3, rotation="oblimin"))
+
+# ritatuib "oblique" & "Latent factor scores" for each respondent.
+(brand.fa.ob <- factanal(brand.sc[,1:9], factors=3, rotation="oblimin", scores="Bartlett"))
+
+brand.scores <- data.frame(brand.fa.ob$scores) # get the factor scores
+brand.scores$brand <- brand.sc$brand # add matching brand names
+# each responent's latent ratings for the factors.
+
+### Computing group/ segment level means.
+
+aggregate(brand.scores[,1:3], list(brand.scores[,4]),mean)
+?aggregate
+
+########################
+########### Dupont Example
+
+Dupont=read.csv("Dupont.csv",header=TRUE)
+
+nScree(Dupont[,7:25])
+eigen(cor(Dupont[,7:25]))
+
+factanal(Dupont[,7:25], factors=4,rotation="varimax") # factor analysis for 4 factors
+
+Dupont_FS=factanal(Dupont[,7:25],factors=4,rotation="varimax",scores="Bartlett")
+# factor
+
+Dupont_FS$scores
+# try Gaussian Mixture Clustering 
+install.packages("mclust")
+library(mclust)
+Dupont_MC <-Mclust(Dupont_FS$scores)
+summary(Dupont_MC)
+
+BIC <- mclustBIC(Dupont_FS$scores)
+plot(BIC)
+Dupont_MC$classification
+
+seg.summ<-function(data,groups){
+aggregate(data,list(groups),function(x) mean(as.numeric(x)))
+} # computing segment- level mean values
+
+seg.summ(Dupont_FS$scores, Dupont_MC$classification)#the func
+
+
+
+
+
+
+
+

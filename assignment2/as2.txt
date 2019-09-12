@@ -1,0 +1,210 @@
+lifestyle=read.csv("imputed_lifestyle.csv",head=TRUE)
+head(lifestyle)
+politics=lifestyle[,11]
+age=lifestyle[,15]
+buyamer=lifestyle[,4]
+gender=as.factor(lifestyle[,19])
+mlr=lm(politics ~age+buyamer+gender)
+summary(mlr)
+
+lifestyle$genbuy <- lifestyle$gender * lifestyle$buyamer
+genbuy = lifestyle$genbuy
+head(lifestyle)
+#We want to investigate the interaction effect of gender and ‘buyamer’. 
+#So, please run the multiple linear regression 
+#of ‘politics’ on ‘age’, ‘buyamer’ and ‘gender’, 
+#and add one interaction term between ‘gender’ and ‘buyamer’. 
+#What is the correct interpretation about the regression results?
+
+intl = lm(politics~age+buyamer+gender+genbuy)
+summary(intl)
+
+##
+
+We want to investigate the interaction effect of gender and age. 
+#So, please run the multiple linear regression 
+#of ‘politics’ on ‘age’, ‘buyamer’ and ‘gender’,
+# and add one interaction term between ‘gender’ and ‘age’ to the multiple regression. 
+#What can you tell about the regression results?
+
+lifestyle$genage<- lifestyle$gender * lifestyle$age
+genage = lifestyle$genage
+head(lifestyle)
+
+intl2=lm(politics~age+buyamer+gender+genage)
+summary(intl2)
+
+lmtemp=lm(politics~age+gender+buyamer)
+summary(lmtemp)
+
+######
+#Ridge Regression is a technique for analyzing multiple regression data that suffer from multicollinearity. When
+#multicollinearity occurs, least squares estimates are unbiased, but their variances are large so they may be far from#
+#the true value. By adding a degree of bias to the regression estimates, ridge regression reduces the standard errors. 
+
+library(MASS)
+lm.ridge(politics~ age+buyamer+gender,lambda=1000)
+lm(politics~ age+buyamer+gender)
+plot(lm.ridge(politics~ age+buyamer+gender,lambda=seq(0,10,0.001)))
+
+liberal = lifestyle$liberal
+IVs = as.matrix(lifestyle[,2:13])
+library(lars)
+res_lasso=lars(IVs, liberal, type="lasso")
+plot(res_lasso)
+cv.lars(IVs,liberal,trace=TRUE)
+coef.lars(res_lasso,s=0.8,mode="fraction")
+coef.lars(res_lasso,s=0.5,mode="fraction")
+exp(0.5)/(1+exp(0.5))
+
+#### 
+train <-read.csv("bank.train.csv")
+head(train)
+y=train$y
+y
+age=train$age
+housing=as.factor(train$housing)
+marital=as.factor(train$marital)
+duration=train$duration
+res_train=glm(y~age+housing+marital+duration,family=binomial("logit"))
+summary(res_train)
+beta=res_train$coefficient
+sum(beta[1]+40*beta[2]+beta[4]+beta[5]+beta[8]*100)
+k=sum(beta[1]+30*beta[2]+beta[4]+beta[6]+beta[8]*400)
+k
+p=exp(k)/(1+exp(k))
+p
+
+t=sum(beta[1]+30*beta[2]+500*beta[8])
+t
+exp(t)
+
+### prediction for new data
+NewData1=data.frame(30,"single","yes",400)
+NewData1
+colnames(NewData1)=c("age","marital","housing","duration")
+a1=predict(res_train,NewData1,type="link")
+p1=exp(a1)/(exp(a1)+1)
+p1
+
+NewData2=data.frame(40,"married","yes",100)
+NewData2
+colnames(NewData2)=c("age","marital","housing","duration")
+a2=predict(res_train,NewData2,type="link")
+a2
+
+NewData3=data.frame(30,"divorced","no",500)
+NewData3
+colnames(NewData3)=c("age","marital","housing","duration")
+a3=predict(res_train,NewData3,type="link")
+a3
+exp(a3)
+
+
+
+
+test=read.csv("bank.valid.csv")
+
+head(train)
+head(test)
+train$marital<-as.factor(train$marital)
+test$marital<-as.factor(test$marital)
+
+train$housing<-as.factor(train$housing)
+test$housing<-as.factor(test$housing)
+head(train)
+Y.train<-train[,5]
+x.train<-train[,-5]
+n=dim(x.train[1])
+n
+
+fit<-glm(y~age+marital+housing+duration,, data=train, family=binomial("logit"))
+pred = predict(fit,test[,-5],type="response")
+pred <- ifelse(pred>0.5,1,0)
+pred
+ctv=table(test[,5],pred)
+ctv
+diag(prop.table(ctv,1))
+sum(diag(prop.table(ctv)))
+8965/(8965+154)
+192/(986+192)
+(8965+192)/(8965+154+986+192)
+
+
+ba=read.csv("Bass_Assignment 2019.csv", header= TRUE)
+ba
+Sales = ts(ba$Sales, start = c(2004))
+Sales
+Y=cumsum(Sales)
+Y=ts(Y,start=c(2004))
+plot(Sales, type="l", lty=2,col="red")
+points(Sales,pch=20,col="blue")
+title("Quarterly iPhone Sales(millions)")
+plot(Y,type="l",lty=2,col="red")
+points(Y,pch=20,col="blue")
+title("Cumulative iPhone Sales(millions)")
+
+Y=c(0, Y[1:(length(Y)-1)])
+# we want T_t-1 instead of Y_t(Cumulative sales ) to match with sales
+Ysq=Y^2
+out=lm(Sales~Y+Ysq) ## S(T)=a+bY(T)+c(Y(T))^2
+summary(out)
+
+
+a=out$coef[1]
+b=out$coef[2]
+c=out$coef[3]
+## now we know a,b and c
+mplus=(-b+sqrt(b^2-4*a*c))/(2*c)# m plus
+mminus=(-b-sqrt(b^2-4*a*c))/(2*c) # m minus
+
+mminus
+# actually m is minus in the equation so let's select mminus.
+m=mminus
+p=a/m
+q=b+p
+p
+q
+
+Bass_Model=function(p,q,m,T=50){
+S=double(T) # total T=50; you can change the T
+Y=double(T+1)
+Y[1]=0 # starting value
+for(t in 1:T){
+S[t]=p*m+(q-p)*Y[t]-(q/m)*Y[t]^2
+Y[t+1]=Y[t]+S[t]
+} # for t by here
+return(list(sales=S, cumSales=cumsum(S)))
+}#Bass prediction function
+
+#### 3, for sales this is case for assignment 2
+Spred=Bass_Model(p,q,m,T=16)$sales
+Spred=ts(Spred,start=2004)
+ts.plot(Sales,Spred,col=c("blue","red")) # actual sales and estimated sales(spred)
+legend("topleft",legend=c("actual","Bass Model"),fill=c("blue","red"))
+Spred # predicted
+Sales # observed sales data
+## for cumulative sales
+Spred=Bass_Model(p,q,m,T=15)$sales # Without T=15, T50
+CumSpred=ts(cumsum(Spred),start=2004)
+CumSales=ts(cumsum(Sales),start=2004)
+ts.plot(CumSales,CumSpred,col=c("blue","red"))
+legend("topleft", legend=c("actual","Bass Model"), fill=c("blue","red"))
+title("Predicted Cumulative iPhone Sales")
+
+install.packages("fpp2")
+library(fpp2)
+ses.Sales <-ses(Sales, alpha=0.2) # simple exponential smoothing
+autoplot(ses.Sales)
+ses.Sales
+
+
+
+
+
+
+
+
+
+
+

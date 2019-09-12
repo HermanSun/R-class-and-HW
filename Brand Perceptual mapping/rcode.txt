@@ -1,0 +1,101 @@
+############
+## Mapping in Lower Dimensions
+
+## Loading Brand_Ratings data##
+brand.ratings <-read.csv("http://goo.gl/IQl8nc")
+brand.ratings[1:10,]
+dim(brand.ratings)
+brand.sc <-brand.ratings
+summary(brand.sc)
+
+brand.sc[,1:9] <- scale(brand.ratings[,1:9]) # following text book
+brand.sc[1:10,]
+
+############################
+###### Perceptual Map by PCA
+##########################
+
+## Brand ratings data --useful for perceptual map
+
+brand.pc <-prcomp(brand.sc[,1:9]) #PCA
+summary(brand.pc)
+brand.pc
+#Rotation: matrix of variable loadings (difficult to interpret)
+# std. dev: sqrt of eigenvalues
+
+pc_var=(brand.pc$sdev)^2 # eigenvalues
+
+pc_var
+
+prop_var=pc_var/sum(pc_var)
+prop_var
+plot(brand.pc,type="l")# elbow selection rule
+
+plot(cumsum(prop_var),xlab="Principal Component", ylab="Cumulative Proportion of Variance Explained", type="b")
+pc_var
+
+biplot(brand.pc, cex=c(0.5,1)) #two dimensional projection map -- but difficult to see
+
+
+#install.packages("factoextra")
+#library(factoextra)
+
+install.packages("FactoMineR")
+library(FactoMineR)
+res.pca <- PCA(brand.sc,quali.sup=10)#PCA analysis in FactoMineR package
+res.pca$eig
+# compute mean across 10 brands
+
+brand.mean <-aggregate(brand.sc[,1:9],list(brand.sc[,10]),mean)
+# aggregate function we learned last class
+brand.mean
+brand.mean1 <-brand.mean[,-1]# exclude brand column
+brand.mean1
+rownames(brand.mean1)<-letters[1:10]# change row names
+brand.mean1
+brand.mu.pc <- prcomp(brand.mean1,scale=TRUE)
+brand.mu.pc
+summary(brand.mu.pc)
+
+biplot(brand.mu.pc,main="Brand positioning", cex=c(1,1))
+
+cor(brand.sc[,1:9]) #similar direction for brands with higher correlations.
+### bargain and value has high correlation
+mean.pca <-PCA(brand.mean,quali.sup=1) #PCA analysis in FactoMineR package
+mean.pca$eig
+x
+############### MDS by cmdscale################
+
+brand.dist <-dist(brand.mean1)
+(brand.mds <-cmdscale(brand.dist))
+#cmdscale: Classical multidimensional scaling of a data matrix
+#compute using distances
+
+plot(brand.mds,type="n")
+rownames(brand.mds)<-paste("",letters,sep="")[1:10] #change row names
+text(brand.mds,rownames(brand.mds),cex=1)
+
+################
+#Infiniti example
+##############
+
+Infiniti=read.csv("Infiniti.csv",head=TRUE)
+
+##using cmdscale
+infi=Infiniti[,-1]
+infi.dist <-dist(infi) #measure distance matrix between features
+(infi.mds<-cmdscale(infi.dist))
+
+plot(infi.mds,type="n")
+rownames(infi.mds)<-as.character(Infiniti[,1]) #change row names
+text(infi.mds,rownames(infi.mds),cex=1)
+
+#using FactoMineR package
+infiniti.pca <-PCA(Infiniti,quali.sup=1)#PCA analysis in FactoMineR package
+
+
+
+
+
+
+

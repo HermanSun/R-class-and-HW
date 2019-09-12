@@ -1,0 +1,104 @@
+##########################################################
+### Build logistic regression Network Classifier in R ####
+##########################################################
+# see: http://www.r-bloggers.com/build-your-own-neural-network-classifier-in-r/
+
+library(ggplot2)
+library(caret) 
+library(mvtnorm)
+library(MASS)
+
+
+###########################################
+## Generating a simple Simulation dataset##
+###########################################
+
+N <- 500 # number of points per class
+D <- 10 # dimensionality
+K <- 2 # number of classes
+
+Bt=as.matrix(c(1,1,5,2,-1,-0.7,2,0,0,0)) #true beta for simulation
+X=mvrnorm(N,rep(0,D),diag(0.5,D))
+Y1=X%*%Bt+rnorm(1,0,0.5)
+Y=matrix(0,N,2);
+Y[Y1>0,1]=1
+Y[Y1<0,2]=1
+
+#############################################
+###### logit_nnet function  #################
+####### using gradient decent ###############
+#############################################
+# see: http://www.r-bloggers.com/build-your-own-neural-network-classifier-in-r/
+
+#let's try the simulation data with logistic regression
+summary(Sim_Res<- glm(as.factor(Y[,1])~0+X, family=binomial("logit")))
+
+source("logit_nnet.R")
+
+#### end of nnet ########
+
+# Prediction function and model training
+
+nnet.model <- logit_nnet(X, Y, step_size = 0.01,reg = 0, niteration = 10000)
+
+nnet.model <- logit_nnet(X, Y, step_size = 0.01,reg = 0, niteration = 100000)
+
+#you can change the step_size and number of iterations
+
+W <-  nnet.model[[1]]
+N <- nrow(X)  
+scores <-(X%*%W)
+predic_nn=rep(0,dim(Y)[1])
+
+predic_nn[scores>0]=1
+
+sum(Y[,1]==predic_nn)/N
+
+print(paste('training accuracy:',sum(Y[,1]==predic_nn)/N))
+
+
+## Logistic Regression
+
+X1=as.matrix(Catalog[,2:4]);
+result_logit=glm(Y[,1]~0+X,family=binomial)
+
+summary(result_logit)
+
+predic1=predict(result_logit,data.frame(Y[,1],X))
+predic2=rep(0,dim(Y)[1])
+
+predic2[predic1>0]=1
+
+sum(Y[,1]==predic2)/N
+
+
+########################
+##### Catalog Data #####
+#######################
+# we used this data for logistic regression
+
+Catalog <-read.csv("Catalog.csv",head=TRUE)
+attach(Catalog)
+Y1=Catalog[,5];
+Y=matrix(0,length(Y1),2)
+Y[,1]=Y1
+Y[which(Y1==0),2]=1 #we need 2 columns matrix setting
+X=as.matrix(cbind(1,Catalog[,2:4]));
+
+###############################
+### Deep Learning R Example ###
+###############################
+
+## see https://www.r-bloggers.com/deep-learning-with-mxnetr/
+
+## or see https://www.datacamp.com/community/tutorials/keras-r-deep-learning
+library(keras)
+
+## In my opinion, deeplearning package is still developing...
+
+
+
+
+
+
+

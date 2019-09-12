@@ -1,0 +1,81 @@
+CrossTab=read.csv("CrossTab_Example(1).csv", ,header=TRUE);
+
+
+dim(CrossTab)
+head(CrossTab)
+summary(CrossTab)
+AccountSize <- table(CrossTab[,2])
+AccountSize
+test <-table(CrossTab[,1])
+test
+dimnames(AccountSize)<-list(c("small","Medium","Large"))
+AccountSize
+Recommendation <-table(CrossTab[,3])
+Recommendation
+chisq.test(Recommendation) # 1 tail chisq test
+dim(CrossTab)
+n=dim(CrossTab)[1]
+n
+table(CrossTab[,2])/n
+mytable=t(table(CrossTab[,2],CrossTab[,3])) #t()transpose
+mytable
+table(CrossTab[,2],CrossTab[,3])
+
+
+chisq.test(mytable)
+library(gmodels)
+CrossTable(CrossTab[,3],CrossTab[,2],dnn=c("Recommendation","AcctSize"))
+AccountSize=CrossTab[,2]
+AccountSize
+AccountSize[AccountSize==1]="Small"
+AccountSize[AccountSize==2]="Medium"
+AccountSize[AccountSize==3]="Large"
+AccountSize
+Recomm=CrossTab[,3]
+Recomm[Recomm==0]="Not_Recomm"
+Recomm[Recomm==1]="Yes_Recomm"
+Recomm
+CrossTable(Recomm,AccountSize,chisq=TRUE,expected=TRUE,dnn=c("Recomm","AcctSize"))
+dotchart(table(Recomm,AccountSize))
+
+##Corr
+
+Corr=read.csv("Correlation_Example(1).csv",,header=TRUE);
+price <-Corr[,2];
+sales<-Corr[,3];
+price
+sales
+
+plot(price,sales)
+cor(price,sales,method = "pearson", use="complete.obs")
+cor.test(price,sales,method="pearson", use="complete.obs")
+abline(lm(sales~price),col="red")
+lines(lowess(price,sales),col="blue")
+library(Hmisc)
+
+plot(price,sales)
+cor(price,sales,method = "pearson", use="complete.obs")
+cor.test(price,sales,method="pearson", use="complete.obs")
+abline(lm(sales~price),col="red")
+lines(lowess(price,sales),col="blue")
+library(Hmisc)
+rcorr(cbind(price,sales),type="pearson")
+
+
+# installing/loading the package:
+if(!require(installr)) {
+  install.packages("installr"); 
+  require(installr)
+} #load / install+load installr
+
+# using the package:
+updateR()
+
+# installing/loading the package:
+if(!require(installr)) {
+  install.packages("installr"); 
+  require(installr)
+} #load / install+load installr
+
+# using the package:
+updateR()

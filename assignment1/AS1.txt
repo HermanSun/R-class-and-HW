@@ -1,0 +1,76 @@
+crossTab=read.csv("lifestyle.csv",,header=TRUE)
+dim(crossTab)
+head(crossTab)
+netdome <- crossTab[,2]
+netdome[netdome==1]="definetely disagree"
+netdome[netdome==2]="generally disagree"
+netdome[netdome==3]="moderately disgree"
+netdome[netdome==4]="moderately agree"
+netdome[netdome==5]="gererally agree"
+netdome[netdome==6]="definetely agree"
+educ <-crossTab[,16]
+educ[educ==1]="Elem School"
+educ[educ==2]="Att High School"
+educ[educ==3]="Grad high School"
+educ[educ==4]="Att College"
+educ[educ==5]="Grad College"
+educ[educ==6]="Post-Grad Educ"
+new_educ<- crossTab[,16]
+crossTab[,16]
+new_educ[new_educ >=4]="Att College or higher"
+new_educ
+new_educ[new_educ <=3]="Grad High School or lower"
+new_educ
+
+#new_educ[new_educ ==1]="Grad High School or lower"
+#new_educ[new_educ ==2]="Grad High School or lower"
+#new_educ[new_educ ==3]="Grad High School or lower"
+#new_educ[new_educ ==4]="Att College or higher"
+#new_educ[new_educ ==5]="Att College or higher"
+#new_educ[new_educ ==6]="Att College or higher"
+library(gmodels)
+CrossTable(netdome,new_educ,chisq=TRUE, expected=TRUE, dnn=c("netdome","educ"))
+
+###########################################
+###########################################
+####Q8#####
+politics = crossTab[,11]
+age=crossTab[,15]
+cor.test(age, politics ,method = "pearson",use="complete.obs")
+m1=lm(politics~age,data=crossTab)
+summary(m1)
+
+betas=m1$coefficients
+betas
+new_age=60
+sum(betas[1]+betas[2]*new_age)
+m2=lm(gun~age,data=crossTab)
+summary(m2)
+m3=lm(liberal~age+deathpen+politics, data=crossTab)
+summary(m3)
+library(coefplot)
+coefplot(m3, intercept=FALSE, ylab="Features", xlab="Relationships with DV")
+betas1=m3$coefficien
+betas1
+a=20
+dp=6
+po=6
+sum(betas1[1]+a*betas1[2]+dp*betas1[3]+po*betas1[4])
+
+exper<-read.csv("experiment_price_ad.csv")
+me1<-lm(Sales~Adv,data=exper)
+summary(me1)
+head(exper)
+me2<-lm(Sales~Adv + Store.Size, data=exper)
+summary(me2)
+me3 <-lm(Sales~Adv+Store.Size+Price, data=exper)
+summary(me3)
+p=24
+ad=0
+ss=40
+betas3=me3$coefficient
+betas3
+sum(betas3[1]+ad*betas3[2]+ss*betas3[3]+p*betas3[4]) 
+exper$pfactor <-factor(exper$Price) 
+me4 <-lm(Sales~Adv+Store.Size+pfactor, data=exper)
+summary(me4)                          

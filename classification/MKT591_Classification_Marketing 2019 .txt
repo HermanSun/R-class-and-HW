@@ -1,0 +1,223 @@
+###########################################
+####### Classification in Marketing ########
+############################################
+
+####### Data Loading ########
+set.seed(100) 
+
+### 1. in-class IT investment example ###
+
+export <- read.csv("Clients.csv",head=TRUE)
+dim(export)
+n<-dim(export)[2]
+Class <- as.factor(export[,1])
+X.size=scale(export[,2]); X.rev=scale(export[,3]);
+X.year=scale(export[,4]); X.prod=scale(export[,5]);
+
+### 2. Textbook data segmentation data loading ###
+# subscription-based service (such as cable television or membership in a warehouse club
+# age, gender, income, number of kids, rent or own homes or currently subscribe or not...(see 5.1.4 in the book)
+
+seg.raw <- read.csv("http://goo.gl/qw303p")
+train.prop = 0.65 #set 65% for training dataset
+train.cases = sample(nrow(seg.raw), nrow(seg.raw)*train.prop)
+
+length(train.cases); 
+head(train.cases); # checking data
+
+seg.df.train=seg.raw[train.cases,]
+seg.df.valid=seg.raw[-train.cases,]
+
+#### 3. Bank Data Loading ####
+
+bank=read.csv("bank-additional-full.csv", head=TRUE)
+
+train.prop = .75 #set 75% for training dataset
+train.cases = sample(nrow(bank), nrow(bank)*train.prop)
+length(train.cases); 
+head(train.cases); # checking data
+
+##using age, marital, housing, duration, previous
+
+class.train=bank[train.cases,c(1,3,6,11,14,21)]
+class.valid=bank[-train.cases,c(1,3,6,11,14,21)]
+
+class.train$marital<-as.factor(class.train[,2])
+class.train$housing<-as.factor(class.train[,3])
+
+#############################
+### Discriminant Analysis ###
+#############################
+
+library(MASS)
+library(ggplot2)
+library(gmodels)
+install.packages("klaR")
+library(klaR)
+
+### 1. in-class IT investment example ###
+Class
+#plot for lda
+fit.lda<- lda(Class ~ X.size + X.rev + X.year + X.prod)
+fit.lda
+plot(fit.lda, dimen=1, type="both") 
+##### to here
+low=which(Class==0) #which are 0 for DV
+low
+length(low) #sample size for the Class=0
+
+#Example: compute low Z mean score...
+mean(X.size[low]*fit.lda$scaling[1]
++X.rev[low]*fit.lda$scaling[2]
++X.year[low]*fit.lda$scaling[3]
++X.prod[low]*fit.lda$scaling[4]) ##Z score for Low
+
+mean(X.size[low]) #check this in fit.lda results
+# for prediction
+fit.lda1 = predict(fit.lda)
+
+(ct<-table(Class, fit.lda1$class)) #classification table
+
+CrossTable(Class, fit.lda1$class)
+
+
+## QDA
+fit.qda<- qda(Class ~ X.size + X.rev + X.year + X.prod)
+fit.qda1 = predict(fit.qda)
+
+(ct<-table(Class, fit.qda1$class)) #classification table
+CrossTable(Class, fit.qda1$class)
+
+#using klaR package
+partimat(Class ~ X.size + X.rev + X.year + X.prod,method="qda")
+
+
+
+########################################
+### Let's try Bayes classifier #########
+########################################
+install.packages("e1071")
+library(e1071);
+
+### 2. textbook data ####
+#run naive Bayes classifier with training data
+seg.nb <- naiveBayes(Segment ~ ., data=seg.df.train)
+
+seg.nb.class <- predict(seg.nb, seg.df.valid) #predict for valid set
+
+library(cluster); #we need a new package for this plot
+
+clusplot(seg.df.valid[,-7], seg.nb.class, color=TRUE, 
+	shade=TRUE, labels=4, lines=0, 
+	main="Naive Bayes classification, valid data")
+
+mean(seg.df.valid$Segment==seg.nb.class) # prediciton hit rate
+
+#Cross-Tab
+table(seg.df.valid$Segment, seg.nb.class)
+
+### 3. bank data ###
+
+set.seed(100)
+#run naive Bayes classifier with training data
+seg.nb <- naiveBayes(y ~ age+housing,data=class.train)
+
+pred.nb <- predict(seg.nb, class.valid) 
+#pred.nb <- ifelse(pred.nb=="yes",1,0)
+
+bayes_t=table(pred.nb,class.valid$y) #frequency table
+
+CrossTv=table(class.valid$y, pred.nb)
+CrossTv[2,2]/(dim(class.valid)[1]-CrossTv[1,1]) #jaccard similarity index
+
+clusplot(class.valid[,-6], pred.nb, color=TRUE, 
+	shade=TRUE, labels=4, lines=0, 
+	main="Naive Bayes classification, valid data")
+
+
+#############################
+### CART Modeling (rpart) ###
+#############################
+
+library(rpart)
+set.seed(100)
+
+#### 1. in-class IT investment example ###
+
+CART_fit.inv <- rpart(Class ~ X.size + X.rev + X.year + X.prod,
+    method="class") #when y is factor
+
+
+printcp(CART_fit.inv) # display the results 
+#summary(CART_fit.inv) # detailed summary of splits
+pred.rpart=predict(CART_fit.inv , type = "class")  # prediction
+
+table(Class,pred.rpart)
+
+plot(CART_fit.inv, uniform=TRUE, 
+    main="Investment Classification Tree")
+ text(CART_fit.inv, use.n=TRUE, all=TRUE, cex=.8)
+
+##### 3. bank example #######################
+
+CART_fit.bank <- rpart(y ~ age+duration+previous,data=class.train, method="class") #when y is factor
+
+printcp(CART_fit.bank) # display the results 
+#summary(CART_fit.bank) # detailed summary of splits
+
+pred.cart<-predict(CART_fit.bank, newdata=class.valid,type="class")
+
+Cross1=CrossTable(class.valid$y, pred.cart)
+
+CrossTv=table(class.valid$y,pred.cart)
+CrossTv[2,2]/(dim(class.valid)[1]-CrossTv[1,1]) 
+
+####################################
+### Random Forest Classificaiton ###
+####################################
+
+library(randomForest);
+set.seed(100)
+
+#### 2. textbook data example ####
+seg.rf <- randomForest(Segment ~., data=seg.df.train, ntree=1000)
+
+seg.rf.class.all<-predict(seg.rf, seg.df.valid, predict.all=TRUE)
+
+n=dim(seg.df.valid)[1]
+
+seg.rf.class<-seg.rf.class.all$aggregate #predicted classification
+
+table(seg.df.valid$Segment,seg.rf.class) # prediction
+CrossTable(seg.df.valid$Segment, seg.rf.class)
+
+
+clusplot(seg.df.valid[, -7], seg.rf.class,color=TRUE, shade=TRUE,
+	labels=4, lines=0, main="Random Forest, holdout data")
+
+seg.rf <- randomForest(Segment ~., data=seg.df.train, ntree=1000,
+	importance=TRUE)
+
+importance(seg.rf,type=1)#important variables
+### it shows variable importance by segment. ###
+
+## Variable Importance plot ##
+varImpPlot(seg.rf, main="Variable importance by segment")
+
+##### 3. bank example #######################
+
+RF_fit.bank <- randomForest(y ~ age+marital+housing+duration,data=class.train, ntree=1000)
+
+library(cluster)
+
+bank.predict <-predict(RF_fit.bank, class.valid, predict.all=TRUE)
+n=dim(class.valid)[1]
+
+seg.rf.class<-bank.predict$aggregate
+
+table(class.valid[,6],seg.rf.class)
+
+Cross1=CrossTable(class.valid$y, seg.rf.class)
+CrossTv=table(class.valid$y,seg.rf.class)
+CrossTv[2,2]/(dim(class.valid)[1]-CrossTv[1,1]) 
+
